@@ -126,6 +126,17 @@ router.post('/jobManager/accept', isAuthenticated, async (req, res) => {
         }
 
         // Assign the applicant to the job and change status to 'in_progress'
+        // ensure the applicant is not employed at another company
+        const companyRow = company; // fetched above
+        const existingEmployment = await new Promise((resolve, reject) => db.get('SELECT company_id FROM company_employees WHERE fb_id = ?', [applicantId], (e, r) => e ? reject(e) : resolve(r)));
+        if (existingEmployment) {
+            // find the id for this job's company
+            const thisCompanyId = companyRow.id;
+            if (Number(existingEmployment.company_id) !== Number(thisCompanyId)) {
+                return res.status(400).send('Applicant is already employed at another company');
+            }
+        }
+
         await new Promise((resolve, reject) => {
             db.run(
                 'UPDATE jobs SET employee_id = ?, status = ? WHERE id = ?',
@@ -137,11 +148,34 @@ router.post('/jobManager/accept', isAuthenticated, async (req, res) => {
             );
         });
 
-        // Remove all applications for this job
+        // add to company_employees (avoid duplicates)
+        await new Promise((resolve, reject) => db.run('INSERT OR IGNORE INTO company_employees (company_id, fb_id) VALUES (?, ?)', [companyRow.id, applicantId], (e) => e ? reject(e) : resolve()));
+
+        // Remove all applications for this job and any related files/details
         await new Promise((resolve, reject) => {
-            db.run('DELETE FROM job_applications WHERE job_id = ?', [jobId], (err) => {
-                if (err) reject(err);
-                else resolve();
+            db.all('SELECT id FROM job_applications WHERE job_id = ?', [jobId], (ea, rows) => {
+                if (ea) return reject(ea);
+                const appIds = (rows || []).map(r => r.id);
+                if (appIds.length === 0) {
+                    // nothing to remove
+                    return db.run('DELETE FROM job_applications WHERE job_id = ?', [jobId], (err) => err ? reject(err) : resolve());
+                }
+
+                const ph = appIds.map(() => '?').join(',');
+
+                // delete files attached to these applications
+                db.run(`DELETE FROM job_application_files WHERE application_id IN (${ph})`, appIds, function(errf) {
+                    if (errf) console.error('Error deleting job_application_files on accept:', errf);
+                    // delete applicant details for these applications
+                    db.run(`DELETE FROM job_applicant_details WHERE application_id IN (${ph})`, appIds, function(errd) {
+                        if (errd) console.error('Error deleting job_applicant_details on accept:', errd);
+                        // finally delete the application rows
+                        db.run(`DELETE FROM job_applications WHERE job_id = ?`, [jobId], function(errja) {
+                            if (errja) return reject(errja);
+                            resolve();
+                        });
+                    });
+                });
             });
         });
 
@@ -275,7 +309,13 @@ router.post('/jobManager/fire/:jobId', isAuthenticated, async (req, res) => {
             return res.status(400).send('Can only fire employees for in-progress jobs');
         }
 
-        // Fire the employee: return the job to available state and clear employee assignment
+        // Fire the employee: remove from company_employees, return the job to available state and clear employee assignment
+        try {
+            await new Promise((resolve, reject) => db.run('DELETE FROM company_employees WHERE company_id = ? AND fb_id = ?', [company.id, job.employee_id], (e) => e ? reject(e) : resolve()));
+        } catch (e) {
+            console.error('Error removing company_employee on job fire:', e);
+        }
+
         await new Promise((resolve, reject) => {
             db.run('UPDATE jobs SET status = ?, employee_id = NULL WHERE id = ?', ['available', jobId], (err) => {
                 if (err) reject(err);
