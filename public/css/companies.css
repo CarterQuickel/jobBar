@@ -73,18 +73,25 @@ input#searchbar{
 .company-item a{color:var(--accent-2); font-weight:600; margin-right:0.6rem}
 .company-item button{color:var(--muted);border:1px solid rgba(255,255,255,0.06);padding:0.45rem 0.7rem;border-radius:8px}
 
+.btc {
+  display: flex;
+  flex-wrap: wrap;
+}
+
 #resourceCont a{
-  display:inline-block;
+  display:flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
   padding:0.3rem 0.6rem;
   border-radius:12px;
   text-decoration:none;
   font-weight:700;
   text-align:center;
-  transition:all 0.3s ease;
+  transition:all 0.2s ease;
   box-shadow:0 4px 12px rgba(0,0,0,0.2);
 }
 
 #resourceCont a:hover{
-  transform:translateY(-3px);
-  box-shadow:0 6px 16px rgba(0,0,0,0.3);
+  scale: 1.05;
 }
