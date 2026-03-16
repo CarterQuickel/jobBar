@@ -2,6 +2,43 @@ require('dotenv').config();
 const router = require('express').Router();
 const isAuthenticated = require('../middleware/isAuthenticated');
 
+// GitHub helpers (dynamic import of ESM-only @octokit/rest)
+let octokit = null;
+async function getOctokit() {
+        if (octokit) return octokit;
+        try {
+                const mod = await import('@octokit/rest');
+                const Octokit = mod.Octokit || (mod.default && mod.default.Octokit) || mod.default;
+                if (!Octokit) throw new Error('Octokit export not found');
+                const opts = {};
+                if (process.env.GITHUB_TOKEN) opts.auth = process.env.GITHUB_TOKEN;
+                octokit = new Octokit(opts);
+                return octokit;
+        } catch (err) {
+                console.error('Failed to load @octokit/rest dynamically in job.js:', err && err.message ? err.message : err);
+                throw err;
+        }
+}
+
+function parseGitHubIssue(url) {
+    const match = url.match(/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/i);
+    if (!match) return null;
+    return { owner: match[1], repo: match[2], issue_number: Number(match[3]) };
+}
+
+async function isGitHubIssueClosed(issueUrl) {
+    const parsed = parseGitHubIssue(issueUrl);
+    if (!parsed) return null;
+    try {
+        const oct = await getOctokit();
+        const result = await oct.rest.issues.get(parsed);
+        return result && result.data && result.data.state === 'closed';
+    } catch (err) {
+        console.error('GitHub API error for URL', issueUrl, err && err.message ? err.message : err);
+        return null;
+    }
+}
+
 // Route: show a single company and its jobs by company name (same EJS page)
 router.get('/job/:companyName', isAuthenticated, (req, res) => {
     const db = req.app.locals.db;
@@ -25,10 +62,38 @@ router.get('/job/:companyName', isAuthenticated, (req, res) => {
             return res.status(500).send('Internal Server Error');
         }
 
-        db.all(jobsQuery, [companyName], (err2, jobs) => {
+        db.all(jobsQuery, [companyName], async (err2, jobs) => {
             if (err2) {
                 console.error(err2);
                 return res.status(500).send('Internal Server Error');
+            }
+            // Auto-complete jobs whose linked GitHub issues are closed
+            if (Array.isArray(jobs) && jobs.length > 0) {
+                const autoClosePromises = jobs.map(async (job) => {
+                    try {
+                        if (!job.link) return;
+                        if (job.status && String(job.status).toLowerCase() === 'completed') return;
+                        const isClosed = await isGitHubIssueClosed(job.link);
+                        console.log(`Job ${job.id}: GitHub issue closed = ${isClosed}`);
+                        if (!isClosed) return;
+
+                        // mark matching jobs completed in DB
+                        await new Promise((resolve) => {
+                            db.run("UPDATE jobs SET status = 'completed' WHERE link = ? AND company = ? AND status != 'completed'", [job.link, companyName], (e) => {
+                                if (e) console.error('Auto-complete DB error:', e);
+                                resolve();
+                            });
+                        });
+
+                        // update in-memory jobs so rendering reflects changes
+                        try {
+                            jobs.forEach(j => { if (j && j.link === job.link && j.company === job.company) j.status = 'completed'; });
+                        } catch (ie) { /* ignore */ }
+                    } catch (e) {
+                        console.error('Error during auto-complete check for job', job.id, e && e.message ? e.message : e);
+                    }
+                });
+                await Promise.all(autoClosePromises);
             }
             // find the selected company object by name (case-insensitive)
             const selectedCompany = companies.find(c => String(c.name).toLowerCase() === String(companyName).toLowerCase()) || null;
