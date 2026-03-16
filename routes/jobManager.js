@@ -1,52 +1,7 @@
 require('dotenv').config();
 const router = require('express').Router();
 const isAuthenticated = require('../middleware/isAuthenticated');
-// @octokit/rest is an ESM-only package. Avoid requiring it at module load time
-// inside this CommonJS app to prevent ERR_REQUIRE_ESM. Lazily import it
-// when needed via dynamic import().
-let octokit = null;
-async function getOctokit() {
-    if (octokit) return octokit;
-    try {
-        const mod = await import('@octokit/rest');
-        // Support multiple possible module shapes: named export, default export, or default.Octokit
-        const Octokit = mod.Octokit || (mod.default && mod.default.Octokit) || mod.default;
-        if (!Octokit) throw new Error('Octokit export not found in @octokit/rest module');
-        const opts = {};
-        if (process.env.GITHUB_TOKEN) opts.auth = process.env.GITHUB_TOKEN;
-        octokit = new Octokit(opts);
-        return octokit;
-    } catch (err) {
-        console.error('Failed to load @octokit/rest dynamically:', err);
-        throw err;
-    }
-}
-
-// Extract repo owner/name + issue number from job.link URL
-function parseGitHubIssue(url) {
-  const match = url.match(/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/i);
-  if (!match) return null;
-
-  return {
-    owner: match[1],
-    repo: match[2],
-    issue_number: Number(match[3])
-  };
-}
-
-async function isGitHubIssueClosed(issueUrl) {
-  const parsed = parseGitHubIssue(issueUrl);
-  if (!parsed) return null; // Not a GitHub issue
-
-  try {
-                const oct = await getOctokit();
-                const result = await oct.rest.issues.get(parsed);
-                return result && result.data && result.data.state === 'closed';
-  } catch (err) {
-        console.error("GitHub API error for URL", issueUrl, err && err.message ? err.message : err);
-        return null;
-  }
-}
+const { isGitHubIssueClosed } = require('../modules/github');
 
  // Route: show a single company and its jobs by company name (same EJS page)
 router.get('/jobManager/:companyName', isAuthenticated, (req, res) => {
