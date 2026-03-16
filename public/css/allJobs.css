@@ -89,7 +89,20 @@ input#job-search-input{
 .job-meta.available{color:rgb(173, 247, 185)}
 .job-meta.completed{color:rgb(188, 165, 235)}
 
-.apply-btn{border:0;padding:0.45rem 0.9rem;border-radius:8px;background:linear-gradient(180deg, var(--accent) 0%, #d95a8e 100%);color:#fff;cursor:pointer;font-weight:700}
+.apply-btn {
+    border:0;
+    padding:0.45rem 0.9rem;
+    border-radius:8px;
+    background: rgba(0, 0, 0, 0.212);
+    color:#fff;
+    cursor:pointer;
+    transition:all 0.2s ease;
+    font-weight:700;
+}
+
+.apply-btn:hover {
+    scale: 1.1;
+}
 
 .company-desc{font-size:0.9rem;color:rgba(255,255,255,0.7);margin-bottom:0.35rem}
 
