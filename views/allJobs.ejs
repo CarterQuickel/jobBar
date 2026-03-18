@@ -29,9 +29,15 @@
                             </span>
                         </div>
                         <div class="job-desc"><%= job.description %></div>
-                        <div class="job-link"><a href="<%= job.link %>" target="_blank">View Issue</a></div>
+                        <div class="job-link">
+                            <a href="<%= job.link %>" target="_blank">
+                                <img src="/icons/redirect.png" width="15" height="15">
+                                <div class="text">Visit Issue Source</div>
+                            </a>
+                        </div>
                         <div class="job-pay">
                             <div class="pay-cont">
+                                +
                                 <img src="/icons/cost.png" width="20" height="20">
                                 <div class="title-text"><%= Number(job.pay).toLocaleString().length > 30 ? Number(job.pay).toLocaleString().substring(0, 30) + '...' : Number(job.pay).toLocaleString() %> %></div>
                             </div>

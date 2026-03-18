@@ -60,11 +60,76 @@ input#job-search-input{
     flex-direction:column;
     min-height:160px;
     transition:transform .12s ease, box-shadow .12s ease;
+    position: relative;
 }
 .job-card:hover{transform:translateY(-6px);box-shadow:0 10px 30px rgba(0,0,0,0.45)}
 
+.job-card .job-title {
+    margin-bottom: 3px;
+}
+
 /* Ensure cards don't stretch too tall — description grows inside */
-.job-desc{margin-top:0.5rem;color:#f2eaf0;flex-grow:1;overflow:hidden}
+.job-desc {
+    height: 60px;
+    overflow-y: auto;
+    margin: 1px 0 1rem
+}
+
+.job-desc::-webkit-scrollbar {
+    width: 8px;
+}
+
+.job-desc::-webkit-scrollbar-thumb {
+    background: rgb(55, 56, 65);
+}
+
+.job-desc::-webkit-scrollbar-track {
+    background: rgb(31, 30, 36);
+}
+
+.job-link {
+    position: absolute;
+    padding: 5px 8px 5px 8px;
+    top: 5px;
+    right: 5px;
+    transition: all 0.2s ease;
+}
+
+.job-link a {
+    position: relative;
+}
+
+.job-link .text {
+    position: absolute;
+    background-color: rgb(36, 37, 43);
+    padding: 5px 8px;
+    top: 0;
+    border-radius: 4px;
+    font-size: 0.8em;
+    white-space: nowrap;
+    opacity: 0;
+    font-weight: 400;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    right: 25px;
+    color: white;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.493);
+    z-index: 50;
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.job-link:hover .text {
+    opacity: 1;
+}
+
+.job-link:hover {
+    scale: 1.05;
+}
+
+.job-link img {
+    filter: invert(1);
+}
 
 .job-pay {
     margin-top:0.75rem;
