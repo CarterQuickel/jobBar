@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= user && user.username ? user.username + "'s Profile" : 'Profile' %></title>
     <link rel="stylesheet" href="/css/profile.css">
+    <link rel="icon" href="/icons/jobbar.png">
 </head>
 <body>
     <%- include("banner.ejs") %>
         <div id="parentCont">
             <div id="topInf">
-                <h1><%= user && user.username ? user.username : 'User' %>'s Profile</h1>
+                <h1><%= user && user.username ? user.username : 'Guest' %>'s Profile</h1>
 
                 <section>
                     <div id="fid">
