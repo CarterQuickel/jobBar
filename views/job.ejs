@@ -18,15 +18,7 @@
     <link rel="icon" href="/icons/jobbar.png">
 </head>
 
-<body
-  style="
-  background: <%= company ? 'linear-gradient(180deg, ' + company.pColor + ', ' + company.sColor + ')' : 'transparent' %>;
-  color: <%= company.bpColor %>;
-  --pColor: <%= company.pColor %>;
-  --sColor: <%= company.sColor %>;
-  --bpColor: <%= company.bpColor %>;
-  --bsColor: <%= company.bsColor %>;
-  ">
+<body>
   <%- include("banner.ejs") %>
   <main class="jobs-container">
     <% 
@@ -38,7 +30,6 @@
       const jobManagerUrl = company ? ('/jobManager/' + encodeURIComponent(company.name)) : '/jobManager/Not%20found';
     %>
     <div class="nav-row">
-      <button class="small-btn" onclick="location.href='/eJob/<%= company ? company.name : 'Not found' %>'">Open Positions</button>
       <% if (canManage) { %>
         <a class="small-btn" href="<%= jobPostsUrl %>">Post a Contract</a>
         <button class="small-btn" onclick="location.href='<%= jobManagerUrl %>'">Manage Contracts</button>
@@ -46,13 +37,7 @@
       <input id="job-search-input" type="text" placeholder="Search jobs..." style="margin: 0;"/>
     </div>
 
-      <div class="jobs-header">
-        <h1>Company: <%= company ? company.name : 'Not found' %>
-        </h1>
-      </div>
-
     <section aria-labelledby="jobs-list">
-      <h2 id="jobs-list">Open Contracts</h2>
       <% 
         // Filter for available jobs (status === 'available')
         const availableJobs = jobs ? jobs.filter(job => {

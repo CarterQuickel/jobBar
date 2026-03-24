@@ -10,19 +10,11 @@
   <link rel="icon" href="/icons/jobbar.png">
 </head>
 
-<body style="
-  background: <%= company ? 'linear-gradient(180deg, ' + company.pColor + ', ' + company.sColor + ')' : 'transparent' %>;
-  color: <%= company.bpColor %>;
-  --pColor: <%= company.pColor %>;
-  --sColor: <%= company.sColor %>;
-  --bpColor: <%= company.bpColor %>;
-  --bsColor: <%= company.bsColor %>;
-">
+<body>
 <%- include("banner.ejs") %>
   <main class="jobs-container">
 
     <div class="jobs-header">
-      <h1>Manage Issues: <%= company ? company.name : 'Not found' %></h1>
       <% if (typeof message !== 'undefined' && message) { %>
         <div class="form-error" style="color:#ffd1d9;margin:0.5rem 0;padding:0.6rem;border-radius:6px;background:rgba(200,30,70,0.06);font-weight:700;">
           <%= message %>
@@ -116,7 +108,7 @@
                 <div class="job-meta taken">
                   Assigned to <%= job.employee_name %>
                   <form action="/jobManager/fire/<%= job.id %>" method="POST" style="display:inline;" onsubmit="return confirm('Fire this employee?');">
-                    <button type="submit" class="fire">Fire</button>
+                    <button type="submit" class="fire">🔥</button>
                   </form>
                   <button class="complete-button" 
                     data-job-id="<%= job.id %>"
