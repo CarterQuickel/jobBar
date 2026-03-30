@@ -11,7 +11,7 @@
     <%- include("banner.ejs") %>
         <div id="parentCont">
             <div id="topInf">
-                <h1><%= user && user.username ? user.username : 'Guest' %>'s Profile</h1>
+                <div style="font-weight: 600; font-size: 50px;""><%= user && user.username ? user.username : 'Guest' %></div>
 
                 <section>
                     <div id="fid">
@@ -49,7 +49,7 @@
                                     </div>
                                 </div>
                             </li>
-                            <% if (companies.indexOf(c) < companies.length - 1) { %><hr><% } %>
+                            <hr>
                         <% }) %>
                         </ul>
                     <% } else { %>
@@ -68,7 +68,7 @@
                                         <a href="/job/<%= encodeURIComponent(p.company_name) %>"><%= p.company_name %></a>
                                     </div>
                                 </li>
-                                <% if (positionsApplied.indexOf(p) < positionsApplied.length - 1) { %><hr><% } %>
+                                <hr>
                             <% }) %>
                         </ul>
                     <% } else { %>
@@ -98,7 +98,7 @@
                                             </div>
                                         </div>
                                     </li>
-                                    <% if (index < jobsApplied.length - 1 || (jobsAccepted && jobsAccepted.length > 0)) { %><hr><% } %>
+                                    <hr>
                                 <% }) %>
                             <% } %>
 
@@ -120,7 +120,7 @@
                                             </div>
                                         </div>
                                     </li>
-                                    <% if (index < jobsAccepted.length - 1) { %><hr><% } %>
+                                    <hr>
                                 <% }) %>
                             <% } %>
                         </ul>
@@ -150,7 +150,7 @@
                                     </form>
                                 </div>
                             </li>
-                            <% if (positionsAccepted.indexOf(p) < positionsAccepted.length - 1) { %><hr><% } %>
+                            <hr>
                         <% }) %>
                     </ul>
                 <% } else { %>
@@ -211,7 +211,6 @@
                 li.addEventListener('mouseleave', () => { if (!lockedLi) hidePopup(); });
                 const title = li.querySelector('.issue-title');
                 if (!title) return;
-                title.style.cursor = 'pointer';
                 title.addEventListener('click', function(ev){
                     ev.preventDefault();
                     if (lockedLi === li) { lockedLi = null; hidePopup(); document.removeEventListener('click', outsideHandler); }
