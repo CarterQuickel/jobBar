@@ -14,9 +14,6 @@
 </head>
 <body
     class="<%= type === 'company' ? 'create-company-page' : (type === 'job' ? 'post-job-page' : '') %>"
-    <% if (type === 'job' && company) { %>
-        style="background: linear-gradient(180deg, <%= company.pColor %>, <%= company.sColor %>); color: <%= company.bpColor %>; --pColor: <%= company.pColor %>; --sColor: <%= company.sColor %>; --bpColor: <%= company.bpColor %>; --bsColor: <%= company.bsColor %>;"
-    <% } %>
 >
     <%- include("banner.ejs") %>
 
@@ -74,8 +71,16 @@
                         <label for="pay">Pay:</label>
                         <input type="number" id="pay" name="pay" required value="<%= job.pay %>">
                     </div>
+                    <div class="inf">
+                        <img src="/icons/info.png" height="15" width="15" style="filter: invert(1)">
+                        <p>Your pay must be greater than or equal to 10 Digipogs</p>
+                    </div>
+                    <div class="inf">
+                        <img src="/icons/info.png" height="15" width="15" style="filter: invert(1)">
+                        <p>If an employee does a portion of the work, good ettiqette is to still pay them a fair wage</p>
+                    </div>
                     <input type="hidden" name="status" value="available">
-                    <button type="submit" style="background-color: <%= (company && company.pColor) ? company.pColor : '#333' %>; color: <%= (company && company.bpColor) ? company.bpColor : '#fff' %>; border: 1px solid <%= (company && company.bpColor) ? company.bpColor : '#fff' %>;">Submit</button>
+                    <button type="submit">Submit</button>
                 </form>
             <% } else if (type === 'position' && position) { %>
                 <form id="position-form" action="/edit/position/<%= position.id %>" method="POST">
@@ -168,7 +173,7 @@
                     })();
                 </script>
                     
-                    <button type="submit" style="background-color: <%= (company && company.pColor) ? company.pColor : '#333' %>; color: <%= (company && company.bpColor) ? company.bpColor : '#fff' %>; border: 1px solid <%= (company && company.bpColor) ? company.bpColor : '#fff' %>;">Submit</button>
+                    <button type="submit">Submit</button>
                 </form>
 
             <% } else { %>
