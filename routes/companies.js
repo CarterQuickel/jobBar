@@ -11,8 +11,75 @@ const db = new sqlite3.Database(dbFile, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CR
 });
 
 // Companies route
-router.get('/companies', isAuthenticated, (req, res) => {
+router.get('/companies', isAuthenticated, async (req, res) => {
     const fb = req.session && req.session.fb_id ? String(req.session.fb_id) : null;
+    const fbId = req.session.fb_id;
+    let user = '';
+
+    try {
+        user = await new Promise((resolve, reject) => db.get('SELECT * FROM users WHERE fb_id = ?', [fbId], (e, row) => e ? reject(e) : resolve(row)));
+        if (!user) return res.status(404).send('User not found');
+    } catch (err) {
+        console.log(err);
+    }
+
+    // Cleanup: remove jobs whose company name doesn't exist, and positions whose company_id doesn't exist.
+    // This prevents orphaned jobs/positions from lingering when companies were removed externally.
+    try {
+        // Orphan jobs: jobs.company has no matching companies.name
+        await new Promise((resolve) => {
+            db.all(`SELECT j.id FROM jobs j LEFT JOIN companies c ON j.company = c.name WHERE c.id IS NULL`, (e, rows) => {
+                if (e) { console.error('Error finding orphan jobs:', e); return resolve(); }
+                const jobIds = (rows || []).map(r => r.id);
+                if (jobIds.length === 0) return resolve();
+
+                const phJobs = jobIds.map(() => '?').join(',');
+
+                // Find application ids for these jobs
+                db.all(`SELECT id FROM job_applications WHERE job_id IN (${phJobs})`, jobIds, (ea, appRows) => {
+                    const appIds = (appRows || []).map(r => r.id);
+                    if (appIds.length > 0) {
+                        const phApps = appIds.map(() => '?').join(',');
+                        db.run(`DELETE FROM job_application_files WHERE application_id IN (${phApps})`, appIds, function(errf) { if (errf) console.error('Error deleting job_application_files for orphan jobs', errf); });
+                        db.run(`DELETE FROM job_applicant_details WHERE application_id IN (${phApps})`, appIds, function(errd) { if (errd) console.error('Error deleting job_applicant_details for orphan jobs', errd); });
+                    }
+
+                    db.run(`DELETE FROM job_applications WHERE job_id IN (${phJobs})`, jobIds, function(errja) { if (errja) console.error('Error deleting job_applications for orphan jobs', errja); });
+                    db.run(`DELETE FROM jobs WHERE id IN (${phJobs})`, jobIds, function(errj) { if (errj) console.error('Error deleting orphan jobs', errj); });
+                    return resolve();
+                });
+            });
+        });
+
+        // Orphan positions: company_positions.company_id has no matching companies.id
+        await new Promise((resolve) => {
+            db.all(`SELECT p.id FROM company_positions p LEFT JOIN companies c ON p.company_id = c.id WHERE c.id IS NULL`, (e, rows) => {
+                if (e) { console.error('Error finding orphan positions:', e); return resolve(); }
+                const posIds = (rows || []).map(r => r.id);
+                if (posIds.length === 0) return resolve();
+
+                const phPos = posIds.map(() => '?').join(',');
+
+                // Find application ids for these positions
+                db.all(`SELECT id FROM position_applications WHERE position_id IN (${phPos})`, posIds, (eap, posAppRows) => {
+                    const posAppIds = (posAppRows || []).map(r => r.id);
+                    if (posAppIds.length > 0) {
+                        const phPosApps = posAppIds.map(() => '?').join(',');
+                        db.run(`DELETE FROM job_application_files WHERE application_id IN (${phPosApps})`, posAppIds, function(errpf) { if (errpf) console.error('Error deleting job_application_files for orphan position applications', errpf); });
+                        db.run(`DELETE FROM job_applicant_details WHERE application_id IN (${phPosApps})`, posAppIds, function(errpd) { if (errpd) console.error('Error deleting job_applicant_details for orphan position applications', errpd); });
+                    }
+
+                    db.run(`DELETE FROM position_applications WHERE position_id IN (${phPos})`, posIds, function(errpa) { if (errpa) console.error('Error deleting position_applications for orphan positions', errpa); });
+                    db.run(`DELETE FROM position_tags WHERE position_id IN (${phPos})`, posIds, function(errpt) { if (errpt) console.error('Error deleting position_tags for orphan positions', errpt); });
+                    db.run(`DELETE FROM company_positions WHERE id IN (${phPos})`, posIds, function(errp) { if (errp) console.error('Error deleting orphan positions', errp); });
+                    return resolve();
+                });
+            });
+        });
+    } catch (cleanupErr) {
+        console.error('Error during orphan cleanup on /companies load:', cleanupErr);
+    }
+
     db.all('SELECT * FROM companies ORDER BY id DESC', (err, rows) => {
         if (err) {
             console.error('Database error:', err);
@@ -23,8 +90,7 @@ router.get('/companies', isAuthenticated, (req, res) => {
             verified: Number(r.verified) || 0,
             isOwner: fb ? (String(r.owner_id) === fb) : false
         }));
-        const isManager = !!fb;
-        res.render('companies', { companies: normalized, user: req.user, fb_id: fb, isManager });
+        res.render('companies', { companies: normalized, user, fb_id: fb });
     });
 });
 

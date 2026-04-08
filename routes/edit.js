@@ -2,10 +2,19 @@ require('dotenv').config();
 const router = require('express').Router();
 const isAuthenticated = require('../middleware/isAuthenticated');
 
-router.get('/edit/company/:companyId', isAuthenticated, (req, res) => {
+router.get('/edit/company/:companyId', isAuthenticated, async (req, res) => {
     const db = req.app.locals.db;
     const fb_id = req.session.fb_id;
     const userFb = fb_id ? String(fb_id) : null;
+    const fbId = req.session.fb_id;
+    let user = '';
+
+    try {
+        user = await new Promise((resolve, reject) => db.get('SELECT * FROM users WHERE fb_id = ?', [fbId], (e, row) => e ? reject(e) : resolve(row)));
+        if (!user) return res.status(404).send('User not found');
+    } catch (err) {
+        console.log(err);
+    }
     if (!fb_id) {
         return res.status(403).send('Forbidden: You must be logged in to edit a company');
     }
@@ -18,13 +27,14 @@ router.get('/edit/company/:companyId', isAuthenticated, (req, res) => {
             return res.status(404).send('Company not found');
         }
         // render shared edit page with company context
-        res.render('edit', { type: 'company', company });
+        res.render('edit', { type: 'company', company, user });
     });
 });
 
 router.post('/edit/company/:companyId', isAuthenticated, (req, res) => {
     const db = req.app.locals.db;
     const fb_id = req.session.fb_id;
+    const companyId = req.params.companyId;
     if (!fb_id) {
         return res.status(403).send('Forbidden: You must be logged in to edit a company');
     }
@@ -32,20 +42,32 @@ router.post('/edit/company/:companyId', isAuthenticated, (req, res) => {
     if (!name || !description || !link || !pColor || !sColor) {
         return res.status(400).send('All fields are required.');
     }
-    const query = `UPDATE companies SET name = ?, description = ?, link = ?, pColor = ?, sColor = ? WHERE owner_id = ? COLLATE NOCASE`;
-    db.run(query, [name, description, link, pColor, sColor, fb_id], function(err) {
+    const query = `UPDATE companies SET name = ?, description = ?, link = ?, pColor = ?, sColor = ? WHERE id = ? AND owner_id = ? COLLATE NOCASE`;
+    db.run(query, [name, description, link, pColor, sColor, companyId, fb_id], function(err) {
         if (err) {
             return res.status(500).send('Internal Server Error');
+        }
+        if (this.changes === 0) {
+            return res.status(404).send('Company not found or you do not have permission to edit it.');
         }
         res.redirect('/jobManager/' + encodeURIComponent(name));
     });
 });
 
-router.get('/edit/job/:jobId', isAuthenticated, (req, res) => {
+router.get('/edit/job/:jobId', isAuthenticated, async (req, res) => {
     const db = req.app.locals.db;
     const fb_id = req.session.fb_id;
     const userFb = fb_id ? String(fb_id) : null;
     const jobId = req.params.jobId;
+    const fbId = req.session.fb_id;
+    let user = '';
+
+    try {
+        user = await new Promise((resolve, reject) => db.get('SELECT * FROM users WHERE fb_id = ?', [fbId], (e, row) => e ? reject(e) : resolve(row)));
+        if (!user) return res.status(404).send('User not found');
+    } catch (err) {
+        console.log(err);
+    }
     if (!fb_id) {
         return res.status(403).send('Forbidden: You must be logged in to edit a job');
     }
@@ -79,7 +101,7 @@ router.get('/edit/job/:jobId', isAuthenticated, (req, res) => {
                 return res.status(500).send('Internal Server Error');
             }
             // render shared edit page with job + company context
-            res.render('edit', { type: 'job', job, company: company || null });
+            res.render('edit', { type: 'job', job, company: company || null, user });
         });
     });
 });
@@ -136,11 +158,20 @@ router.post('/edit/job/:jobId', isAuthenticated, (req, res) => {
 });
 
 // --- routes for editing positions ---
-router.get('/edit/position/:positionId', isAuthenticated, (req, res) => {
+router.get('/edit/position/:positionId', isAuthenticated, async (req, res) => {
     const db = req.app.locals.db;
     const fb_id = req.session.fb_id;
     const userFb = fb_id ? String(fb_id) : null;
     const positionId = req.params.positionId;
+    const fbId = req.session.fb_id;
+    let user = '';
+
+    try {
+        user = await new Promise((resolve, reject) => db.get('SELECT * FROM users WHERE fb_id = ?', [fbId], (e, row) => e ? reject(e) : resolve(row)));
+        if (!user) return res.status(404).send('User not found');
+    } catch (err) {
+        console.log(err);
+    }
 
     if (!fb_id) {
         return res.status(403).send('Forbidden: You must be logged in to edit a position');
@@ -177,7 +208,7 @@ router.get('/edit/position/:positionId', isAuthenticated, (req, res) => {
                     return res.status(500).send('Internal Server Error');
                 }
                 const tags = (tagRows || []).map(r => r.name);
-                res.render('edit', { type: 'position', position, company: company || null, tags });
+                res.render('edit', { type: 'position', position, company: company || null, tags, user });
             });
         });
     });
@@ -190,7 +221,7 @@ router.post('/edit/position/:positionId', isAuthenticated, (req, res) => {
 
     if (!fb_id) return res.status(403).send('Forbidden: You must be logged in to edit a position');
 
-    const { title, description, link } = req.body;
+    const { title, description } = req.body;
     if (!title || !description) return res.status(400).send('Title and description are required.');
 
     db.get('SELECT p.*, c.owner_id, c.name AS company_name FROM company_positions p LEFT JOIN companies c ON p.company_id = c.id WHERE p.id = ?', [positionId], (err, position) => {
@@ -210,8 +241,8 @@ router.post('/edit/position/:positionId', isAuthenticated, (req, res) => {
             return res.redirect('/positionManager/' + encodeURIComponent(companyName) + '?error=' + encodeURIComponent('Too late to edit this position.'));
         }
 
-        const updateQuery = 'UPDATE company_positions SET title = ?, description = ?, link = ? WHERE id = ?';
-        db.run(updateQuery, [title, description, link || '', positionId], function(updateErr) {
+        const updateQuery = 'UPDATE company_positions SET title = ?, description = ? WHERE id = ?';
+        db.run(updateQuery, [title, description, positionId], function(updateErr) {
             if (updateErr) {
                 console.error('Database error updating position:', updateErr);
                 return res.status(500).send('Internal Server Error');

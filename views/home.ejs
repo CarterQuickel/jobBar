@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title><%= company.name %></title>
     <link rel="stylesheet" href="/css/banner.css">
     <link rel="stylesheet" href="/css/index.css">
     <link rel="stylesheet" href="/css/home.css">
+    <link rel="icon" href="/icons/jobbar.png">
 </head>
 <body>
         <%- include("banner.ejs") %>
@@ -21,7 +22,8 @@
 
                 <div style="display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap;">
                     <div><strong>Owner:</strong> <%= owner ? (owner.username || owner.fb_id) : 'Unknown' %></div>
-                    <div><strong>Employees:</strong> <% if (employees && employees.length > 0) { %>
+                    <div><strong>Employees:</strong> 
+                    <% if (employees && employees.length > 0) { %>
                         <span><%= employees.map(e => e.username || e.fb_id).join(', ') %></span>
                     <% } else { %>
                         <span>None</span>

@@ -7,22 +7,14 @@
     <title>Job Post</title>
     <link rel="stylesheet" href="/css/index.css">
     <link rel="stylesheet" href="/css/post.css">
+    <link rel="icon" href="/icons/jobbar.png">
 </head>
 
-<body style="
-  background: <%= company ? 'linear-gradient(180deg, ' + company.pColor + ', ' + company.sColor + ')' : 'transparent' %>;
-  color: <%= company.bpColor %>;
-  --pColor: <%= company.pColor %>;
-  --sColor: <%= company.sColor %>;
-  --bpColor: <%= company.bpColor %>;
-  --bsColor: <%= company.bsColor %>;
-  " class="post-job-page">
+<body class="post-job-page">
   <%- include("banner.ejs") %>
 
     <div class="container">
         <div class="post-card">
-            <h1>Post an Issue for <%= company.name %>
-            </h1>
             <form id="jobpost-form" action="/jobPosts" method="POST">
                 <input type="hidden" name="company" value="<%= company.name %>">
                 <div class="form-row">
@@ -112,8 +104,8 @@
                         // Validate pay amount before showing modal
                         const payInput = document.getElementById('pay');
                         const payValue = Number(payInput.value);
-                        if (isNaN(payValue) || payValue < 10) {
-                            alert('Pay must be at least 10 DigiPogs');
+                        if (isNaN(payValue) || payValue < 10 || payValue > 100000) {
+                            alert('Invalid cost (100 - 100,000 digipogs)');
                             payInput.focus();
                             return;
                         }
